@@ -2,8 +2,6 @@ import { useState, useEffect } from "react"
 import { collection, addDoc, getDocs, query, where, Timestamp, orderBy, doc, updateDoc } from "firebase/firestore"
 import { db, auth } from "../firebase/firebase.js"
 
-import { onAuthStateChanged } from "firebase/auth"
-
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("home")
   const [medicines, setMedicines] = useState([])
@@ -78,16 +76,17 @@ export default function Dashboard() {
       setLoading(false)
     }
   }
-useEffect(() => {
-  // আপাতত Token থেকে userId বানায় নেন
-  const token = localStorage.getItem('token')
-  if (token) {
-    setUserId(token) // Token কেই userId বানায় দিলাম
-    fetchMedicines(token)
-  } else {
-    window.location.href = "/login"
-  }
-}, [])
+
+  useEffect(() => {
+    // আপাতত Token থেকে userId বানায় নেন
+    const token = localStorage.getItem('token')
+    if (token) {
+      setUserId(token) // Token কেই userId বানায় দিলাম
+      fetchMedicines(token)
+    } else {
+      window.location.href = "/login"
+    }
+  }, [])
 
   const toggleTaken = async (id) => {
     const med = medicines.find(m => m.id === id)
@@ -117,18 +116,7 @@ useEffect(() => {
             <p style={{fontSize: '12px', color: '#64748B', margin: 0}}>Smart Health Companion</p>
           </div>
         </div>
-        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px'}}>
-  <h1 style={{color: '#1E293B'}}>MediTrack Dashboard</h1>
-  
-  <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
-    <span style={{color: '#64748B', fontWeight: '500'}}>
-      Hi, User! 👋
-    </span>
-    <button onClick={handleLogout} style={{padding: '8px 16px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}>
-      Logout
-    </button>
-  </div>
-</div>
+    
         <button 
           onClick={() => alert('SOS Emergency Called!')}
           style={{backgroundColor: '#EF4444', color: 'white', padding: '8px 16px', borderRadius: '999px', fontSize: '14px', fontWeight: '600', border: 'none', cursor: 'pointer'}}
@@ -136,14 +124,14 @@ useEffect(() => {
           📞 SOS Emergency
         </button>
         <button 
-  onClick={() => {
-    localStorage.removeItem('token')
-    window.location.href = '/login'
-  }}
-  style={{backgroundColor: '#64748B', color: 'white', padding: '8px 16px', borderRadius: '999px', fontSize: '14px', fontWeight: '600', border: 'none', cursor: 'pointer', marginLeft: '8px'}}
->
-  🚪 Logout
-</button>
+          onClick={() => {
+            localStorage.removeItem('token')
+            window.location.href = '/login'
+          }}
+          style={{backgroundColor: '#64748B', color: 'white', padding: '8px 16px', borderRadius: '999px', fontSize: '14px', fontWeight: '600', border: 'none', cursor: 'pointer', marginLeft: '8px'}}
+        >
+          🚪 Logout
+        </button>
       </div>
 
       {/* Tabs */}
