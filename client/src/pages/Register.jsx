@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/firebase.js";
 import { useNavigate, Link } from "react-router-dom";
-import logo from "../assets/hero.png";
+import axios from "axios";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -14,9 +14,23 @@ function Register() {
     e.preventDefault();
     setError("");
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Real Firebase ID Token retrieve
+      const token = await user.getIdToken();
+
+      // Backend এ User sync করা
+      await axios.post('http://localhost:5000/api/auth/sync', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Token LocalStorage এ Save করা
+      localStorage.setItem('token', token);
+
       navigate("/dashboard");
     } catch (err) {
+      console.error("Registration Error:", err);
       setError("Registration Failed. Email may already exist.");
     }
   };
@@ -24,17 +38,17 @@ function Register() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-2xl">
-        
+
         {/* Logo Section */}
         <div className="flex flex-col items-center mb-8">
-  <div className="bg-blue-600 p-4 rounded-2xl shadow-lg mb-4">
-    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-    </svg>
-  </div>
-  <h1 className="text-4xl font-bold text-gray-800">Medi<span className="text-blue-600">Track</span></h1>
-  <p className="text-gray-500 mt-2">Hospital Management System</p>
-</div>
+          <div className="bg-blue-600 p-4 rounded-2xl shadow-lg mb-4">
+            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-bold text-gray-800">Medi<span className="text-blue-600">Track</span></h1>
+          <p className="text-gray-500 mt-2">Hospital Management System</p>
+        </div>
 
         <h2 className="mb-6 text-2xl font-bold text-center text-blue-600">
           Create MediTrack Account

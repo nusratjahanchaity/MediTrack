@@ -1,0 +1,53 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const connectDB = require('./config/db');
+
+// Initialize database connection
+connectDB();
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Import Routes
+const authRoutes = require('./routes/auth');
+const medicineRoutes = require('./routes/medicine');
+
+// Register Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/medicines', medicineRoutes);
+
+// Health check and database connection verification endpoint
+app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState;
+  // readyState values: 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+  const states = {
+    0: 'Disconnected',
+    1: 'Connected',
+    2: 'Connecting',
+    3: 'Disconnecting'
+  };
+
+  res.json({
+    status: 'UP',
+    database: {
+      status: states[dbStatus] || 'Unknown',
+      code: dbStatus
+    },
+    timestamp: new Date()
+  });
+});
+
+// Root welcome route
+app.get('/', (req, res) => {
+  res.send('MediTrack API Server is running');
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

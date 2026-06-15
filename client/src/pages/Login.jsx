@@ -2,7 +2,7 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/firebase.js";
 import { useNavigate, Link } from "react-router-dom";
-import logo from "../assets/hero.png";
+import axios from "axios";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -23,16 +23,24 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // User ID Token হিসেবে Save
-      localStorage.setItem('token', user.uid);
-      console.log('Token Set:', user.uid);
+      // Real Firebase ID Token retrieve
+      const token = await user.getIdToken();
+
+      // Backend এ User sync করা
+      await axios.post('http://localhost:5000/api/auth/sync', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // User Token হিসেবে Save
+      localStorage.setItem('token', token);
+      console.log('Token Set successfully');
 
       // Dashboard এ Navigate
       navigate('/dashboard');
 
     } catch (err) {
       console.error("Login Error:", err.message);
-      
+
       // User friendly error message
       if (err.code === 'auth/wrong-password') {
         setError("Password ভুল হইছে!");
@@ -51,7 +59,7 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="w-full max-w-md p-8 bg-white border-gray-100 shadow-xl rounded-2xl">
-        
+
         <div className="flex flex-col items-center mb-8">
           <div className="p-4 mb-4 bg-blue-600 shadow-lg rounded-2xl">
             <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +95,7 @@ export default function Login() {
               className="w-full p-3 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
+
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-700">Password</label>
             <input
