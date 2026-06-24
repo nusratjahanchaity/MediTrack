@@ -15,7 +15,7 @@ const getMedicines = async (req, res) => {
 // @desc Add new medicine
 // @route POST /api/medicines
 const addMedicine = async (req, res) => {
-  const { name, dosage, time, type, color } = req.body;
+  const { name, dosage, time, type, color, comment } = req.body;
 
   if (!name || !dosage || !time) {
     return res.status(400).json({ message: 'Please provide name, dosage, and time' });
@@ -29,6 +29,7 @@ const addMedicine = async (req, res) => {
       time,
       type,
       color,
+      comment: comment || '',
       taken: false
     });
 
@@ -63,7 +64,7 @@ const toggleMedicineTaken = async (req, res) => {
 // @desc Update medicine details
 // @route PUT /api/medicines/:id
 const updateMedicine = async (req, res) => {
-  const { name, dosage, time, type, color } = req.body;
+  const { name, dosage, time, type, color, comment } = req.body;
 
   try {
     const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user.uid });
@@ -77,6 +78,7 @@ const updateMedicine = async (req, res) => {
     if (time) medicine.time = time;
     if (type) medicine.type = type;
     if (color) medicine.color = color;
+    if (comment !== undefined) medicine.comment = comment;
 
     const updatedMedicine = await medicine.save();
     res.json(updatedMedicine);
@@ -103,10 +105,40 @@ const deleteMedicine = async (req, res) => {
   }
 };
 
+// @desc Bulk add medicines
+// @route POST /api/medicines/bulk
+const bulkAddMedicines = async (req, res) => {
+  const { medicines } = req.body;
+
+  if (!Array.isArray(medicines) || medicines.length === 0) {
+    return res.status(400).json({ message: 'Please provide an array of medicines' });
+  }
+
+  try {
+    const medicinesToInsert = medicines.map(med => ({
+      userId: req.user.uid,
+      name: med.name,
+      dosage: med.dosage,
+      time: med.time,
+      type: med.type || 'Tablet',
+      color: med.color || '#3B82F6',
+      comment: med.comment || '',
+      taken: false
+    }));
+
+    const savedMedicines = await Medicine.insertMany(medicinesToInsert);
+    res.status(201).json(savedMedicines);
+  } catch (error) {
+    console.error('Error bulk saving medicines:', error.message);
+    res.status(500).json({ message: 'Server error bulk saving medicines' });
+  }
+};
+
 module.exports = {
   getMedicines,
   addMedicine,
   toggleMedicineTaken,
   updateMedicine,
-  deleteMedicine
+  deleteMedicine,
+  bulkAddMedicines
 };

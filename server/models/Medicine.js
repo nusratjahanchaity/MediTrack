@@ -33,6 +33,10 @@ const medicineSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  comment: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now

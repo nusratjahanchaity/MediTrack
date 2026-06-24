@@ -6,11 +6,15 @@ const {
   addMedicine,
   toggleMedicineTaken,
   updateMedicine,
-  deleteMedicine
+  deleteMedicine,
+  bulkAddMedicines
 } = require('../controllers/medicineController');
 
 // All medicine routes require authentication
 router.use(authMiddleware);
+
+// POST /api/medicines/bulk (bulk add)
+router.post('/bulk', bulkAddMedicines);
 
 // GET /api/medicines & POST /api/medicines
 router.route('/')
