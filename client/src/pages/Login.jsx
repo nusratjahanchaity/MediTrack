@@ -31,7 +31,7 @@ export default function Login() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // User Token হিসেবে Save
+      // User Token হিসেবে Save                                                                                                        
       localStorage.setItem('token', token);
       console.log('Token Set successfully');
 
@@ -67,15 +67,8 @@ export default function Login() {
             </svg>
           </div>
           <h1 className="text-4xl font-bold text-gray-800">Medi<span className="text-blue-600">Track</span></h1>
-          <p className="mt-2 text-gray-500">Hospital Management System</p>
-        </div>
-
-        <h2 className="mb-2 text-3xl font-bold text-center text-gray-800">
-          MediTrack Login
-        </h2>
-        <p className="mb-6 text-sm text-center text-gray-500">
-          Welcome back! Please sign in to continue
-        </p>
+          <p className="mb-6 text-sm text-center text-gray-500">Please sign in to continue</p>
+        </div>        
 
         {error && (
           <div className="px-4 py-3 mb-4 text-sm text-red-600 border-red-200 rounded-lg bg-red-50">
