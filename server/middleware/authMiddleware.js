@@ -4,7 +4,7 @@ const { getAuth } = require('firebase-admin/auth');
 // Initialize Firebase Admin SDK
 if (getApps().length === 0) {
   try {
-    const serviceAccount = require('../firebase-service-account.json');
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     initializeApp({
       credential: cert(serviceAccount)
     });
