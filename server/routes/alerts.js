@@ -65,4 +65,33 @@ router.patch('/:id/resolve', async (req, res) => {
   }
 });
 
+// POST /api/alerts/sos
+// Triggers an emergency SOS alert for the logged-in patient
+router.post('/sos', async (req, res) => {
+  try {
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const message = `EMERGENCY SOS: Patient ${req.user.email} triggered an emergency alert at ${timeStr}`;
+
+    const alert = new Alert({
+      userId: req.user.uid,
+      medicineId: null,
+      message
+    });
+    await alert.save();
+
+    const { logActivity } = require('../utils/activityLogger');
+    await logActivity({
+      userId: req.user.uid,
+      action: 'TRIGGER_SOS',
+      description: `Triggered emergency SOS alert at ${timeStr}`,
+      req
+    });
+
+    res.status(201).json({ success: true, message: 'Emergency SOS alert sent successfully', alert });
+  } catch (error) {
+    console.error('Error triggering SOS:', error.message);
+    res.status(500).json({ message: 'Server error triggering SOS alert' });
+  }
+});
+
 module.exports = router;

@@ -288,7 +288,11 @@ export default function Dashboard() {
         const prevIds = new Set(prev.map(a => a._id || a.id));
         const newAlerts = response.data.filter(a => !prevIds.has(a._id || a.id));
         newAlerts.forEach(a => {
-          toast.error(`🚨 Missed Medicine Alert: ${a.message}`, { duration: 7000 });
+          if (a.message.startsWith('EMERGENCY SOS')) {
+            toast.error(`🚨 ${a.message}`, { duration: 10000 });
+          } else {
+            toast.error(`🚨 Missed Medicine Alert: ${a.message}`, { duration: 7000 });
+          }
         });
         return response.data;
       });
@@ -308,6 +312,22 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Resolve Alert Error:", error);
     }
+  }
+
+  const triggerSOS = async () => {
+    showConfirm("Are you sure you want to trigger an EMERGENCY SOS? This will alert your caregivers and administrators immediately.", async () => {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post('http://localhost:5000/api/alerts/sos', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        showAlert("🚨 EMERGENCY SOS triggered successfully!");
+        fetchHistory(token, "");
+      } catch (error) {
+        console.error("SOS Trigger Error:", error);
+        showAlert("Failed to trigger SOS emergency alert.");
+      }
+    });
   }
 
   const handleUpload = async (e) => {
@@ -813,12 +833,14 @@ export default function Dashboard() {
             </div>
           )}
 
-          <button
-            onClick={() => showAlert('SOS Emergency Called!')}
-            style={{ backgroundColor: '#EF4444', color: 'white', padding: '8px 16px', borderRadius: '999px', fontSize: '14px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
-          >
-            📞 SOS Emergency
-          </button>
+          {role === 'user' && (
+            <button
+              onClick={triggerSOS}
+              style={{ backgroundColor: '#EF4444', color: 'white', padding: '8px 16px', borderRadius: '999px', fontSize: '14px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
+            >
+              📞 SOS Emergency
+            </button>
+          )}
           <button
             onClick={() => {
               localStorage.removeItem('token')

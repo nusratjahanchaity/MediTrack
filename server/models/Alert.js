@@ -9,7 +9,7 @@ const alertSchema = new mongoose.Schema({
   medicineId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Medicine',
-    required: true
+    default: null
   },
   message: {
     type: String,
