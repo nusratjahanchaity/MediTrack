@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { auth } from "../firebase/firebase.js"
 import axios from "axios"
 import { toast, Toaster } from "react-hot-toast"
+import { API_BASE_URL } from "../config"
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("home")
@@ -96,7 +97,7 @@ export default function Dashboard() {
 
   const fetchMedicines = async (token, targetUid = selectedPatientUid) => {
     try {
-      const url = targetUid ? `http://localhost:5000/api/medicines?userId=${targetUid}` : 'http://localhost:5000/api/medicines';
+      const url = targetUid ? `${API_BASE_URL}/api/medicines?userId=${targetUid}` : `${API_BASE_URL}/api/medicines`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -120,7 +121,7 @@ export default function Dashboard() {
       setLoading(true)
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.post('http://localhost:5000/api/medicines', {
+        const response = await axios.post(`${API_BASE_URL}/api/medicines`, {
           name: medName,
           dosage,
           time,
@@ -162,7 +163,7 @@ export default function Dashboard() {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.put(`http://localhost:5000/api/medicines/${editingMed._id || editingMed.id}`, {
+      const response = await axios.put(`${API_BASE_URL}/api/medicines/${editingMed._id || editingMed.id}`, {
         name: editMedName,
         dosage: editDosage,
         time: editTime,
@@ -191,7 +192,7 @@ export default function Dashboard() {
     showConfirm("Are you sure you want to delete this medication?", async () => {
       try {
         const token = localStorage.getItem('token')
-        await axios.delete(`http://localhost:5000/api/medicines/${id}`, {
+        await axios.delete(`${API_BASE_URL}/api/medicines/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setMedicines(medicines.filter(m => (m._id || m.id) !== id))
@@ -207,7 +208,7 @@ export default function Dashboard() {
   const fetchPrescriptions = async (token, targetUid = selectedPatientUid) => {
     setFetchLoading(true)
     try {
-      const url = targetUid ? `http://localhost:5000/api/prescriptions?userId=${targetUid}` : 'http://localhost:5000/api/prescriptions';
+      const url = targetUid ? `${API_BASE_URL}/api/prescriptions?userId=${targetUid}` : `${API_BASE_URL}/api/prescriptions`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -220,7 +221,7 @@ export default function Dashboard() {
 
   const fetchHistory = async (token, targetUid = selectedPatientUid) => {
     try {
-      const url = targetUid ? `http://localhost:5000/api/history?userId=${targetUid}` : 'http://localhost:5000/api/history';
+      const url = targetUid ? `${API_BASE_URL}/api/history?userId=${targetUid}` : `${API_BASE_URL}/api/history`;
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -232,7 +233,7 @@ export default function Dashboard() {
 
   const fetchNotifications = async (token) => {
     try {
-      const response = await axios.get('http://localhost:5000/api/notifications', {
+      const response = await axios.get(`${API_BASE_URL}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -256,7 +257,7 @@ export default function Dashboard() {
   const markNotificationAsRead = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+      await axios.patch(`${API_BASE_URL}/api/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.map(n => (n._id || n.id) === id ? { ...n, isRead: true } : n));
@@ -268,7 +269,7 @@ export default function Dashboard() {
   const markAllNotificationsAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch('http://localhost:5000/api/notifications/read-all', {}, {
+      await axios.patch(`${API_BASE_URL}/api/notifications/read-all`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -280,7 +281,7 @@ export default function Dashboard() {
 
   const fetchActiveAlerts = async (token) => {
     try {
-      const response = await axios.get('http://localhost:5000/api/alerts', {
+      const response = await axios.get(`${API_BASE_URL}/api/alerts`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -304,7 +305,7 @@ export default function Dashboard() {
   const resolveAlert = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:5000/api/alerts/${id}/resolve`, {}, {
+      await axios.patch(`${API_BASE_URL}/api/alerts/${id}/resolve`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setActiveAlerts(prev => prev.filter(a => (a._id || a.id) !== id));
@@ -318,7 +319,7 @@ export default function Dashboard() {
     showConfirm("Are you sure you want to trigger an EMERGENCY SOS? This will alert your caregivers and administrators immediately.", async () => {
       try {
         const token = localStorage.getItem('token');
-        await axios.post('http://localhost:5000/api/alerts/sos', {}, {
+        await axios.post(`${API_BASE_URL}/api/alerts/sos`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         showAlert("🚨 EMERGENCY SOS triggered successfully!");
@@ -345,7 +346,7 @@ export default function Dashboard() {
         formData.append('userId', selectedPatientUid);
       }
 
-      const response = await axios.post('http://localhost:5000/api/prescriptions', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/prescriptions`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -374,7 +375,7 @@ export default function Dashboard() {
       try {
         const token = localStorage.getItem('token');
         console.log("Sending delete request for ID:", id);
-        const res = await axios.delete(`http://localhost:5000/api/prescriptions/${id}`, {
+        const res = await axios.delete(`${API_BASE_URL}/api/prescriptions/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         console.log("Delete response:", res.data);
@@ -404,7 +405,7 @@ export default function Dashboard() {
       setExtractingId(pres._id || pres.id);
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.post(`http://localhost:5000/api/prescriptions/${pres._id || pres.id}/extract`, {}, {
+        const response = await axios.post(`${API_BASE_URL}/api/prescriptions/${pres._id || pres.id}/extract`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -459,7 +460,7 @@ export default function Dashboard() {
     setSavingExtracted(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/medicines/bulk', {
+      await axios.post(`${API_BASE_URL}/api/medicines/bulk`, {
         medicines: tempMedicines,
         userId: selectedPatientUid || undefined
       }, {
@@ -493,7 +494,7 @@ export default function Dashboard() {
   const loadProfileAndData = async (token) => {
     try {
       // Get user profile first
-      const profileRes = await axios.get('http://localhost:5000/api/users/me', {
+      const profileRes = await axios.get(`${API_BASE_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const profile = profileRes.data;
@@ -513,7 +514,7 @@ export default function Dashboard() {
 
       // If caregiver or admin, fetch assigned patients
       if (profile.role === 'caregiver' || profile.role === 'admin') {
-        const assignedRes = await axios.get('http://localhost:5000/api/users/assigned', {
+        const assignedRes = await axios.get(`${API_BASE_URL}/api/users/assigned`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAssignedPatients(assignedRes.data);
@@ -534,12 +535,12 @@ export default function Dashboard() {
 
   const fetchAdminLists = async (token) => {
     try {
-      const patientsRes = await axios.get('http://localhost:5000/api/users/patients', {
+      const patientsRes = await axios.get(`${API_BASE_URL}/api/users/patients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAllPatients(patientsRes.data);
 
-      const caregiversRes = await axios.get('http://localhost:5000/api/users/caregivers', {
+      const caregiversRes = await axios.get(`${API_BASE_URL}/api/users/caregivers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAllCaregivers(caregiversRes.data);
@@ -564,7 +565,7 @@ export default function Dashboard() {
 
     setAdminSavingAssign(prev => ({ ...prev, [patientUid]: true }));
     try {
-      await axios.post('http://localhost:5000/api/users/assign', {
+      await axios.post(`${API_BASE_URL}/api/users/assign`, {
         patientUid,
         caregiverUid: caregiverUid || null
       }, {
@@ -599,7 +600,7 @@ export default function Dashboard() {
     if (!token) return;
 
     try {
-      await axios.put(`http://localhost:5000/api/users/${editingUser.uid}`, {
+      await axios.put(`${API_BASE_URL}/api/users/${editingUser.uid}`, {
         email: editUserEmail,
         role: editUserRole
       }, {
@@ -624,7 +625,7 @@ export default function Dashboard() {
       if (!token) return;
 
       try {
-        await axios.delete(`http://localhost:5000/api/users/${uid}`, {
+        await axios.delete(`${API_BASE_URL}/api/users/${uid}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -666,7 +667,7 @@ export default function Dashboard() {
     if (med) {
       try {
         const token = localStorage.getItem('token')
-        const response = await axios.patch(`http://localhost:5000/api/medicines/${id}/toggle`, {}, {
+        const response = await axios.patch(`${API_BASE_URL}/api/medicines/${id}/toggle`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -1511,7 +1512,7 @@ export default function Dashboard() {
                           <div>
                             <div style={{ height: '140px', backgroundColor: '#F8FAFC', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: '12px', border: '1px solid #F1F5F9' }}>
                               {isImage ? (
-                                <img src={`http://localhost:5000/${pres.filePath}`} alt={pres.originalName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={`${API_BASE_URL}/${pres.filePath}`} alt={pres.originalName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <div style={{ fontSize: '48px' }}>📕</div>
                               )}
@@ -1866,20 +1867,20 @@ export default function Dashboard() {
             
             <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#F8FAFC', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', border: '1px solid #E2E8F0' }}>
               {viewingPrescription.mimeType?.startsWith('image/') ? (
-                <img src={`http://localhost:5000/${viewingPrescription.filePath}`} alt={viewingPrescription.originalName} style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px' }} />
+                <img src={`${API_BASE_URL}/${viewingPrescription.filePath}`} alt={viewingPrescription.originalName} style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px' }} />
               ) : viewingPrescription.mimeType === 'application/pdf' ? (
-                <iframe src={`http://localhost:5000/${viewingPrescription.filePath}`} style={{ width: '100%', height: '60vh', border: 'none', borderRadius: '8px' }} title={viewingPrescription.originalName} />
+                <iframe src={`${API_BASE_URL}/${viewingPrescription.filePath}`} style={{ width: '100%', height: '60vh', border: 'none', borderRadius: '8px' }} title={viewingPrescription.originalName} />
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
                   <p style={{ fontSize: '48px', margin: '0 0 16px 0' }}>📄</p>
                   <p style={{ fontSize: '16px', fontWeight: '600', color: '#1E293B' }}>Cannot preview this file format.</p>
-                  <a href={`http://localhost:5000/${viewingPrescription.filePath}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '12px', backgroundColor: '#2563EB', color: 'white', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontWeight: '600' }}>Download to View</a>
+                  <a href={`${API_BASE_URL}/${viewingPrescription.filePath}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: '12px', backgroundColor: '#2563EB', color: 'white', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontWeight: '600' }}>Download to View</a>
                 </div>
               )}
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
-              <a href={`http://localhost:5000/${viewingPrescription.filePath}`} download style={{ backgroundColor: '#2563EB', color: 'white', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '14px', marginRight: '10px', display: 'flex', alignItems: 'center' }}>Download</a>
+              <a href={`${API_BASE_URL}/${viewingPrescription.filePath}`} download style={{ backgroundColor: '#2563EB', color: 'white', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontWeight: '600', fontSize: '14px', marginRight: '10px', display: 'flex', alignItems: 'center' }}>Download</a>
               <button onClick={() => setViewingPrescription(null)} style={{ backgroundColor: '#64748B', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>Close</button>
             </div>
           </div>
@@ -1910,9 +1911,9 @@ export default function Dashboard() {
                 <h4 style={{ fontSize: '15px', fontWeight: '600', color: '#334155', margin: '0 0 12px 0' }}>📄 Document Reference</h4>
                 <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
                   {reviewingPrescription.mimeType?.startsWith('image/') ? (
-                    <img src={`http://localhost:5000/${reviewingPrescription.filePath}`} alt="Prescription Reference" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    <img src={`${API_BASE_URL}/${reviewingPrescription.filePath}`} alt="Prescription Reference" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   ) : reviewingPrescription.mimeType === 'application/pdf' ? (
-                    <iframe src={`http://localhost:5000/${reviewingPrescription.filePath}`} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px' }} title="Prescription Reference PDF" />
+                    <iframe src={`${API_BASE_URL}/${reviewingPrescription.filePath}`} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px' }} title="Prescription Reference PDF" />
                   ) : (
                     <div style={{ textAlign: 'center', padding: '20px' }}>
                       <span style={{ fontSize: '40px' }}>📄</span>

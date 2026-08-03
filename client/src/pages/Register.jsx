@@ -3,6 +3,8 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/firebase.js";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../config";
+
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -22,7 +24,7 @@ function Register() {
       const token = await user.getIdToken();
 
       // Backend এ User sync করা
-      await axios.post('http://localhost:5000/api/auth/sync', { role }, {
+      await axios.post(`${API_BASE_URL}/api/auth/sync`, { role }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -3,6 +3,8 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/firebase.js";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../config";
+
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -27,7 +29,7 @@ export default function Login() {
       const token = await user.getIdToken();
 
       // Backend এ User sync করা
-      await axios.post('http://localhost:5000/api/auth/sync', {}, {
+      await axios.post(`${API_BASE_URL}/api/auth/sync`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -43,13 +45,13 @@ export default function Login() {
 
       // User friendly error message
       if (err.code === 'auth/wrong-password') {
-        setError("Password ভুল হইছে!");
+        setError("Incorrect password!");
       } else if (err.code === 'auth/user-not-found') {
-        setError("এই Email দিয়ে Account নাই!");
+        setError("No account found with this email!");
       } else if (err.code === 'auth/invalid-email') {
-        setError("Email Format ঠিক নাই!");
+        setError("Invalid email format!");
       } else {
-        setError("Login করতে Problem হইছে। আবার চেষ্টা করেন।");
+        setError("Login failed. Please try again.");
       }
     }
 
