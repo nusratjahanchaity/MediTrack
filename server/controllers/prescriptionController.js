@@ -1,14 +1,22 @@
 const Prescription = require('../models/Prescription');
 const fs = require('fs');
 const path = require('path');
+const { checkUserAccess } = require('../utils/auth');
+const { logActivity } = require('../utils/activityLogger');
 
-// @desc    Get all prescriptions for logged-in user
+// @desc    Get all prescriptions for logged-in user or assigned user
 // @route   GET /api/prescriptions
 // @access  Private
 exports.getPrescriptions = async (req, res) => {
+  const targetUid = req.query.userId || req.user.uid;
   try {
-    console.log("getPrescriptions: fetching for user", req.user.uid);
-    const prescriptions = await Prescription.find({ userId: req.user.uid }).sort({ createdAt: -1 });
+    console.log("getPrescriptions: fetching for user", targetUid);
+    
+    if (!await checkUserAccess(req.user, targetUid)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized' });
+    }
+
+    const prescriptions = await Prescription.find({ userId: targetUid }).sort({ createdAt: -1 });
     res.json(prescriptions);
   } catch (error) {
     console.error('Error fetching prescriptions:', error);
@@ -20,8 +28,20 @@ exports.getPrescriptions = async (req, res) => {
 // @route   POST /api/prescriptions
 // @access  Private
 exports.uploadPrescription = async (req, res) => {
+  const targetUid = req.body.userId || req.user.uid;
   try {
-    console.log("uploadPrescription: user", req.user.uid);
+    console.log("uploadPrescription: user", targetUid);
+
+    if (!await checkUserAccess(req.user, targetUid)) {
+      if (req.file) {
+        const filePath = path.join(__dirname, '..', 'uploads', req.file.filename);
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Error deleting file after auth failure:', err);
+        });
+      }
+      return res.status(403).json({ message: 'Access denied: Unauthorized' });
+    }
+
     if (!req.file) {
       console.log("uploadPrescription: no file in request");
       return res.status(400).json({ message: 'No file uploaded' });
@@ -31,7 +51,7 @@ exports.uploadPrescription = async (req, res) => {
     console.log("uploadPrescription: file details:", { filename, originalname, mimetype, size });
 
     const prescription = new Prescription({
-      userId: req.user.uid,
+      userId: targetUid,
       filename,
       originalName: originalname,
       filePath: `uploads/${filename}`,
@@ -41,6 +61,14 @@ exports.uploadPrescription = async (req, res) => {
 
     const savedPrescription = await prescription.save();
     console.log("uploadPrescription: saved metadata to DB:", savedPrescription._id);
+    
+    await logActivity({
+      userId: targetUid,
+      action: 'UPLOAD_PRESCRIPTION',
+      description: `Uploaded prescription document "${originalname}"`,
+      req
+    });
+
     res.status(201).json(savedPrescription);
   } catch (error) {
     console.error('Error saving prescription:', error);
@@ -61,14 +89,15 @@ exports.uploadPrescription = async (req, res) => {
 exports.deletePrescription = async (req, res) => {
   try {
     console.log("deletePrescription: deleting id", req.params.id, "for user", req.user.uid);
-    const prescription = await Prescription.findOne({
-      _id: req.params.id,
-      userId: req.user.uid
-    });
+    const prescription = await Prescription.findById(req.params.id);
 
     if (!prescription) {
       console.log("deletePrescription: prescription not found in DB with id", req.params.id);
       return res.status(404).json({ message: 'Prescription not found' });
+    }
+
+    if (!await checkUserAccess(req.user, prescription.userId)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized' });
     }
 
     console.log("deletePrescription: found prescription document:", prescription._id, prescription.filename);
@@ -87,6 +116,14 @@ exports.deletePrescription = async (req, res) => {
 
       await Prescription.deleteOne({ _id: prescription._id });
       console.log("deletePrescription: deleted metadata from DB");
+
+      await logActivity({
+        userId: prescription.userId,
+        action: 'DELETE_PRESCRIPTION',
+        description: `Deleted prescription document "${prescription.originalName}"`,
+        req
+      });
+
       res.json({ message: 'Prescription deleted successfully' });
     });
   } catch (error) {
@@ -103,14 +140,15 @@ exports.extractPrescription = async (req, res) => {
     const { id } = req.params;
     console.log("extractPrescription: extracting for id", id, "for user", req.user.uid);
 
-    const prescription = await Prescription.findOne({
-      _id: id,
-      userId: req.user.uid
-    });
+    const prescription = await Prescription.findById(id);
 
     if (!prescription) {
       console.log("extractPrescription: prescription not found in DB with id", id);
       return res.status(404).json({ message: 'Prescription not found' });
+    }
+
+    if (!await checkUserAccess(req.user, prescription.userId)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized' });
     }
 
     // Return cached data if already extracted to avoid token burnout
@@ -309,6 +347,14 @@ Return the result as a JSON array of objects with the following schema:
     const updatedPrescription = await prescription.save();
 
     console.log("extractPrescription: extraction successful! Saved to DB:", updatedPrescription._id);
+
+    await logActivity({
+      userId: prescription.userId,
+      action: 'EXTRACT_PRESCRIPTION',
+      description: `Extracted medical schedule from prescription "${prescription.originalName}" using AI`,
+      req
+    });
+
     res.json(updatedPrescription);
 
   } catch (error) {

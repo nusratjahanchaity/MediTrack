@@ -22,11 +22,22 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const authRoutes = require('./routes/auth');
 const medicineRoutes = require('./routes/medicine');
 const prescriptionRoutes = require('./routes/prescription');
+const userRoutes = require('./routes/users');
+const historyRoutes = require('./routes/history');
+const notificationRoutes = require('./routes/notifications');
+const alertRoutes = require('./routes/alerts');
 
 // Register Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/alerts', alertRoutes);
+
+// Start background medicine schedule checking worker
+require('./utils/scheduler');
 
 // Health check and database connection verification endpoint
 app.get('/api/health', (req, res) => {

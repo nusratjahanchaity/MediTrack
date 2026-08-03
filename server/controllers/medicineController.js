@@ -1,10 +1,18 @@
 const Medicine = require('../models/Medicine');
+const { checkUserAccess } = require('../utils/auth');
+const { logActivity } = require('../utils/activityLogger');
 
-// @desc Get all medicines for current user
+// @desc Get all medicines for current user or assigned user
 // @route GET /api/medicines
 const getMedicines = async (req, res) => {
+  const targetUid = req.query.userId || req.user.uid;
+
   try {
-    const medicines = await Medicine.find({ userId: req.user.uid }).sort({ createdAt: -1 });
+    if (!await checkUserAccess(req.user, targetUid)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized to view medications for this user' });
+    }
+
+    const medicines = await Medicine.find({ userId: targetUid }).sort({ createdAt: -1 });
     res.json(medicines);
   } catch (error) {
     console.error('Error fetching medicines:', error.message);
@@ -15,15 +23,20 @@ const getMedicines = async (req, res) => {
 // @desc Add new medicine
 // @route POST /api/medicines
 const addMedicine = async (req, res) => {
-  const { name, dosage, time, type, color, comment } = req.body;
+  const { name, dosage, time, type, color, comment, userId } = req.body;
+  const targetUid = userId || req.user.uid;
 
   if (!name || !dosage || !time) {
     return res.status(400).json({ message: 'Please provide name, dosage, and time' });
   }
 
   try {
+    if (!await checkUserAccess(req.user, targetUid)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized to add medications for this user' });
+    }
+
     const newMedicine = new Medicine({
-      userId: req.user.uid,
+      userId: targetUid,
       name,
       dosage,
       time,
@@ -34,6 +47,12 @@ const addMedicine = async (req, res) => {
     });
 
     const savedMedicine = await newMedicine.save();
+    await logActivity({
+      userId: targetUid,
+      action: 'ADD_MEDICINE',
+      description: `Added medication "${name}" (Dosage: ${dosage}, Time: ${time})`,
+      req
+    });
     res.status(201).json(savedMedicine);
   } catch (error) {
     console.error('Error saving medicine:', error.message);
@@ -45,14 +64,30 @@ const addMedicine = async (req, res) => {
 // @route PATCH /api/medicines/:id/toggle
 const toggleMedicineTaken = async (req, res) => {
   try {
-    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user.uid });
+    const medicine = await Medicine.findById(req.params.id);
 
     if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found or unauthorized' });
+      return res.status(404).json({ message: 'Medicine not found' });
+    }
+
+    if (!await checkUserAccess(req.user, medicine.userId)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized to update this medication' });
     }
 
     medicine.taken = !medicine.taken;
     await medicine.save();
+
+    if (medicine.taken) {
+      const Alert = require('../models/Alert');
+      await Alert.updateMany({ medicineId: medicine._id, isResolved: false }, { isResolved: true });
+    }
+
+    await logActivity({
+      userId: medicine.userId,
+      action: 'TOGGLE_MEDICINE',
+      description: `Marked medication "${medicine.name}" as ${medicine.taken ? 'taken' : 'not taken'}`,
+      req
+    });
 
     res.json(medicine);
   } catch (error) {
@@ -67,10 +102,14 @@ const updateMedicine = async (req, res) => {
   const { name, dosage, time, type, color, comment } = req.body;
 
   try {
-    const medicine = await Medicine.findOne({ _id: req.params.id, userId: req.user.uid });
+    const medicine = await Medicine.findById(req.params.id);
 
     if (!medicine) {
-      return res.status(404).json({ message: 'Medicine not found or unauthorized' });
+      return res.status(404).json({ message: 'Medicine not found' });
+    }
+
+    if (!await checkUserAccess(req.user, medicine.userId)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized to update this medication' });
     }
 
     if (name) medicine.name = name;
@@ -81,6 +120,12 @@ const updateMedicine = async (req, res) => {
     if (comment !== undefined) medicine.comment = comment;
 
     const updatedMedicine = await medicine.save();
+    await logActivity({
+      userId: medicine.userId,
+      action: 'UPDATE_MEDICINE',
+      description: `Updated medication "${medicine.name}" details`,
+      req
+    });
     res.json(updatedMedicine);
   } catch (error) {
     console.error('Error updating medicine:', error.message);
@@ -92,11 +137,31 @@ const updateMedicine = async (req, res) => {
 // @route DELETE /api/medicines/:id
 const deleteMedicine = async (req, res) => {
   try {
-    const result = await Medicine.deleteOne({ _id: req.params.id, userId: req.user.uid });
+    const medicine = await Medicine.findById(req.params.id);
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: 'Medicine not found or unauthorized' });
+    if (!medicine) {
+      return res.status(404).json({ message: 'Medicine not found' });
     }
+
+    if (!await checkUserAccess(req.user, medicine.userId)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized to delete this medication' });
+    }
+
+    const medName = medicine.name;
+    const medUserId = medicine.userId;
+    await Medicine.deleteOne({ _id: req.params.id });
+
+    const Alert = require('../models/Alert');
+    const Notification = require('../models/Notification');
+    await Alert.deleteMany({ medicineId: req.params.id });
+    await Notification.deleteMany({ medicineId: req.params.id });
+
+    await logActivity({
+      userId: medUserId,
+      action: 'DELETE_MEDICINE',
+      description: `Deleted medication "${medName}"`,
+      req
+    });
 
     res.json({ message: 'Medicine deleted successfully', id: req.params.id });
   } catch (error) {
@@ -108,15 +173,20 @@ const deleteMedicine = async (req, res) => {
 // @desc Bulk add medicines
 // @route POST /api/medicines/bulk
 const bulkAddMedicines = async (req, res) => {
-  const { medicines } = req.body;
+  const { medicines, userId } = req.body;
+  const targetUid = userId || req.user.uid;
 
   if (!Array.isArray(medicines) || medicines.length === 0) {
     return res.status(400).json({ message: 'Please provide an array of medicines' });
   }
 
   try {
+    if (!await checkUserAccess(req.user, targetUid)) {
+      return res.status(403).json({ message: 'Access denied: Unauthorized to add medications for this user' });
+    }
+
     const medicinesToInsert = medicines.map(med => ({
-      userId: req.user.uid,
+      userId: targetUid,
       name: med.name,
       dosage: med.dosage,
       time: med.time,
@@ -127,6 +197,12 @@ const bulkAddMedicines = async (req, res) => {
     }));
 
     const savedMedicines = await Medicine.insertMany(medicinesToInsert);
+    await logActivity({
+      userId: targetUid,
+      action: 'BULK_ADD_MEDICINES',
+      description: `Bulk added ${savedMedicines.length} medications from prescription`,
+      req
+    });
     res.status(201).json(savedMedicines);
   } catch (error) {
     console.error('Error bulk saving medicines:', error.message);

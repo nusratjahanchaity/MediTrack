@@ -7,6 +7,7 @@ import axios from "axios";
 function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("user");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -21,7 +22,7 @@ function Register() {
       const token = await user.getIdToken();
 
       // Backend এ User sync করা
-      await axios.post('http://localhost:5000/api/auth/sync', {}, {
+      await axios.post('http://localhost:5000/api/auth/sync', { role }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -31,7 +32,19 @@ function Register() {
       navigate("/dashboard");
     } catch (err) {
       console.error("Registration Error:", err);
-      setError("Registration Failed. Email may already exist.");
+      if (err.code) {
+        if (err.code === 'auth/email-already-in-use') {
+          setError("This email is already in use.");
+        } else if (err.code === 'auth/weak-password') {
+          setError("Password is too weak. Must be at least 6 characters.");
+        } else if (err.code === 'auth/invalid-email') {
+          setError("Invalid email format.");
+        } else {
+          setError(`Registration failed: ${err.message}`);
+        }
+      } else {
+        setError(err.response?.data?.message || err.message || "Registration Failed.");
+      }
     }
   };
 
@@ -73,6 +86,17 @@ function Register() {
             required
             className="w-full p-3 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">I want to register as a:</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="user">Patient / Normal User</option>
+              <option value="caregiver">Caregiver</option>
+            </select>
+          </div>
           <button
             type="submit"
             className="w-full py-3 font-semibold text-white transition bg-green-600 rounded-lg hover:bg-green-700"
